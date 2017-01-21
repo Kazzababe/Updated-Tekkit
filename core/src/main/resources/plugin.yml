@@ -1,0 +1,4 @@
+name: Tekkit
+main: ravioli.gravioli.tekkit.Tekkit
+version: 0.8.0
+description: Plugin that adds features from Tekkit and various other modpacks
