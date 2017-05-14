@@ -78,15 +78,20 @@ public class MachineListeners implements Listener {
             return;
         }
 
-        ItemStack item = event.getItemInHand();
-        if (item != null) {
-            PhysicalMachine machine = TekkitAPI.getMachineManager().getMachine(item);
-            if (machine != null) {
-                try {
-                    PhysicalMachine newMachine = machine.getClass().newInstance();
-                    newMachine.place(event.getPlayer(), event.getBlock().getLocation());
-                } catch(IllegalAccessException | InstantiationException e) {
-                    e.printStackTrace();
+        if (event.getPlayer() != null) {
+            Player player = event.getPlayer();
+            ItemStack item = event.getItemInHand();
+            if (item != null) {
+                PhysicalMachine machine = TekkitAPI.getMachineManager().getMachine(item);
+                if (machine != null) {
+                    if (player.hasPermission("tekkitinspired.placemachine.all") || player.hasPermission("tekkitinspired.placemachine." + machine.getName().toLowerCase())) {
+                        try {
+                            PhysicalMachine newMachine = machine.getClass().newInstance();
+                            newMachine.place(player, event.getBlock().getLocation());
+                        } catch (IllegalAccessException | InstantiationException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
         }

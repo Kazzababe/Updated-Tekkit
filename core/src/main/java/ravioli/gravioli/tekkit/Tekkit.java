@@ -3,48 +3,81 @@ package ravioli.gravioli.tekkit;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.command.CommandMap;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.SimplePluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import ravioli.gravioli.tekkit.api.TekkitAPI;
 import ravioli.gravioli.tekkit.api.TekkitPlugin;
+import ravioli.gravioli.tekkit.api.machines.Machine;
+import ravioli.gravioli.tekkit.api.machines.PhysicalMachine;
 import ravioli.gravioli.tekkit.commands.Command;
+import ravioli.gravioli.tekkit.commands.GiveMachineCommand;
+import ravioli.gravioli.tekkit.database.JSONDatabase;
 import ravioli.gravioli.tekkit.database.Sqlite;
 import ravioli.gravioli.tekkit.machines.MachineBlockBreaker;
 import ravioli.gravioli.tekkit.listeners.MachineListeners;
+import ravioli.gravioli.tekkit.machines.MachineMiningWell;
 import ravioli.gravioli.tekkit.machines.serializers.LocationSerializer;
+import ravioli.gravioli.tekkit.machines.serializers.TransportItemSetSerializer;
 import ravioli.gravioli.tekkit.machines.serializers.UUIDSerializer;
+import ravioli.gravioli.tekkit.machines.transport.*;
 import ravioli.gravioli.tekkit.manager.TekkitMachineManager;
 
 import java.lang.reflect.Field;
+import java.sql.SQLException;
 import java.util.UUID;
 
 public class Tekkit extends JavaPlugin implements TekkitPlugin {
     private TekkitMachineManager machineManager;
     private Sqlite sqlite;
+    private JSONDatabase jsonDatabase;
+
+    public static boolean AUTO_EQUIP;
+    public static boolean VISIBLE_TRANSPORT;
+    public static int MAX_TRANSPORT_BLOCKS;
 
     @Override
     public void onLoad() {
         sqlite = new Sqlite(this);
+        jsonDatabase = new JSONDatabase(this);
     }
 
     @Override
     public void onEnable() {
+        setupConfig();
+
         TekkitAPI.setInstance(this);
         machineManager = (TekkitMachineManager) TekkitAPI.createMachineManager(this);
 
         machineManager.registerSerializer(UUID.class, new UUIDSerializer());
         machineManager.registerSerializer(Location.class, new LocationSerializer());
+        machineManager.registerSerializer(TransportItemSet.class, new TransportItemSetSerializer());
 
         machineManager.registerMachine(new MachineBlockBreaker());
+        machineManager.registerMachine(new MachineMiningWell());
+        machineManager.registerMachine(new WoodenPipe());
+        machineManager.registerMachine(new IronPipe());
+        machineManager.registerMachine(new GoldPipe());
+        machineManager.registerMachine(new DiamondPipe());
+        machineManager.registerMachine(new VoidPipe());
+
+        registerCommand(new GiveMachineCommand(this));
 
         registerListener(new MachineListeners(this));
     }
 
     @Override
     public void onDisable() {
-
+        for (PhysicalMachine machine : TekkitAPI.getMachineManager().getMachines()) {
+            machine.save();
+        }
+        try {
+            sqlite.getConnection().close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -55,6 +88,19 @@ public class Tekkit extends JavaPlugin implements TekkitPlugin {
     @Override
     public TekkitMachineManager getMachineManager() {
         return machineManager;
+    }
+
+    private void setupConfig() {
+        FileConfiguration config = getConfig();
+        config.addDefault("auto-equip", true);
+        config.addDefault("visible-transport", false);
+        config.addDefault("max-transport-blocks", 1000);
+        config.options().copyDefaults(true);
+        saveConfig();
+
+        AUTO_EQUIP = config.getBoolean("auto-equip");
+        VISIBLE_TRANSPORT = config.getBoolean("visible-transport");
+        MAX_TRANSPORT_BLOCKS = config.getInt("max-transport-blocks");
     }
 
     public Sqlite getSqlite() {
@@ -87,5 +133,9 @@ public class Tekkit extends JavaPlugin implements TekkitPlugin {
         } catch (NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    public Machine getRegisteredMachine(String name) {
+        return getMachineManager().getRegisteredMachine(name);
     }
 }

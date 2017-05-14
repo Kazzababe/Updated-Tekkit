@@ -5,6 +5,7 @@ import ravioli.gravioli.tekkit.Tekkit;
 import ravioli.gravioli.tekkit.api.machines.PhysicalMachine;
 import ravioli.gravioli.tekkit.database.utils.DatabaseUtils;
 
+import javax.management.openmbean.KeyAlreadyExistsException;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.sql.*;
@@ -90,10 +91,15 @@ public class Sqlite {
             ResultSet results = statement.executeQuery();
             while (results.next()) {
                 String worldName = results.getString("location").split(",")[0];
-                if (Bukkit.getWorld(worldName) != null) {
-                    machine.load(results);
-                } else {
-                    plugin.getMachineManager().addUnloadedMachine(worldName, machine);
+                try {
+                    PhysicalMachine newMachine = machine.getClass().newInstance();
+                    if (Bukkit.getWorld(worldName) != null) {
+                        newMachine.load(results);
+                    } else {
+                        plugin.getMachineManager().addUnloadedMachine(worldName, newMachine);
+                    }
+                } catch (KeyAlreadyExistsException | IllegalAccessException | InstantiationException e) {
+                    e.printStackTrace();
                 }
             }
         } catch (SQLException e) {

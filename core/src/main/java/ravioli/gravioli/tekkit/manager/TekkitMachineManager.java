@@ -28,6 +28,10 @@ public class TekkitMachineManager implements MachineManager {
         this.plugin = (Tekkit) plugin;
     }
 
+    public Machine getRegisteredMachine(String name) {
+        return registeredMachines.get(name.toLowerCase());
+    }
+
     @Override
     public void registerSerializer(Class type, DatabaseSerializer serializer) {
         serializers.put(type, serializer);
@@ -46,7 +50,7 @@ public class TekkitMachineManager implements MachineManager {
     @Override
     public void registerMachine(Machine machine) {
         machine.register(plugin);
-        registeredMachines.put(machine.getName(), machine);
+        registeredMachines.put(machine.getName().toLowerCase(), machine);
 
         if (machine instanceof PhysicalMachine) {
             plugin.getSqlite().loadMachines((PhysicalMachine) machine);
